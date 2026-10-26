@@ -1,0 +1,16 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-nova-08d470c9-4d79-41a9-9ce7-cdeb4a162664",
+      "rules": "firestore.rules"
+    }
+  ],
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8085
+    }
+  }
+}

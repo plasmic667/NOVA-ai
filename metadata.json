@@ -1,0 +1,6 @@
+{
+  "name": "Nova",
+  "description": "Nova - AI Android Personal Assistant powered by Gemini and Firebase with voice, device actions, and smart multi-modal intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

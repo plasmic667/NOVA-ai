@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 200)) &&
+             (!('voiceAutoPlay' in data) || data.voiceAutoPlay in ['ALWAYS', 'VOICE_ONLY', 'NEVER']) &&
+             (!('speechSpeed' in data) || data.speechSpeed is number) &&
+             (!('agentModeEnabled' in data) || data.agentModeEnabled is bool) &&
+             (!('syncToCloud' in data) || data.syncToCloud is bool);
+    }
+
+    function isValidConversation(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMessage(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.conversationId is string && data.conversationId.size() > 0 && data.conversationId.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.role in ['user', 'assistant'] &&
+             data.content is string && data.content.size() <= 50000 &&
+             (!('actionType' in data) || data.actionType == null || (data.actionType is string && data.actionType.size() <= 100)) &&
+             (!('actionStatus' in data) || data.actionStatus == null || (data.actionStatus is string && data.actionStatus.size() <= 50)) &&
+             (!('actionPayload' in data) || data.actionPayload == null || (data.actionPayload is string && data.actionPayload.size() <= 10000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidActionRecord(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.actionType is string && data.actionType.size() <= 100 &&
+             (!('riskLevel' in data) || data.riskLevel in ['LOW', 'MEDIUM', 'HIGH']) &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 500)) &&
+             data.status is string && data.status.size() <= 50 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming());
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
+      match /conversations/{conversationId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         isValidConversation(incoming());
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidConversation(incoming());
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+
+        match /messages/{messageId} {
+          allow get, list: if isSignedIn() && request.auth.uid == userId;
+          allow create: if isSignedIn() &&
+                           request.auth.uid == userId &&
+                           incoming().userId == request.auth.uid &&
+                           isValidMessage(incoming());
+          allow update: if isSignedIn() &&
+                           request.auth.uid == userId &&
+                           incoming().userId == existing().userId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidMessage(incoming());
+          allow delete: if isSignedIn() && request.auth.uid == userId;
+        }
+      }
+
+      match /actions/{actionId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         isValidActionRecord(incoming());
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidActionRecord(incoming());
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+  }
+}

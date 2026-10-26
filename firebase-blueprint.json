@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and assistant preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "voiceAutoPlay": { "type": "string", "enum": ["ALWAYS", "VOICE_ONLY", "NEVER"], "description": "TTS voice autoplay preference" },
+        "speechSpeed": { "type": "number", "description": "Speech speed multiplier" },
+        "agentModeEnabled": { "type": "boolean", "description": "Whether Agent Mode multi-step execution is active" },
+        "syncToCloud": { "type": "boolean", "description": "Whether cloud sync is enabled" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Assistant conversation thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique conversation ID" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "title": { "type": "string", "description": "Conversation topic title" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Message within a conversation thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique message ID" },
+        "conversationId": { "type": "string", "description": "Parent conversation ID" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "role": { "type": "string", "enum": ["user", "assistant"], "description": "Role of the sender" },
+        "content": { "type": "string", "description": "Text body of the message" },
+        "actionType": { "type": "string", "description": "Optional action requested by AI" },
+        "actionStatus": { "type": "string", "description": "Status of the action (PENDING, APPROVED, EXECUTED, CANCELLED, FAILED)" },
+        "actionPayload": { "type": "string", "description": "JSON payload of parameters for the action" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp created" }
+      },
+      "required": ["id", "conversationId", "userId", "role", "content", "createdAt"]
+    },
+    "ActionRecord": {
+      "title": "ActionRecord",
+      "description": "Audit record of actions requested and performed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique action ID" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "actionType": { "type": "string", "description": "Action type identifier" },
+        "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"], "description": "Action risk category" },
+        "description": { "type": "string", "description": "Human-readable summary of the action" },
+        "status": { "type": "string", "description": "Execution status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp logged" }
+      },
+      "required": ["id", "userId", "actionType", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Conversation thread documents"
+    },
+    "/users/{userId}/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a conversation"
+    },
+    "/users/{userId}/actions/{actionId}": {
+      "schema": "ActionRecord",
+      "description": "Historical log of actions executed by Nova"
+    }
+  }
+}
